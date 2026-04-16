@@ -1,10 +1,9 @@
 import express from "express";
-import fetch from "node-fetch";
 import cheerio from "cheerio";
 
 const app = express();
 
-// ✅ Health check (IMPORTANT for Railway)
+// Health check
 app.get("/", (req, res) => {
   res.send("BEP Tracker Running");
 });
@@ -36,11 +35,11 @@ app.get("/track", async (req, res) => {
     res.json({ status, date, location });
 
   } catch (err) {
-    res.json({ error: "Failed to fetch BEP" });
+    res.json({ error: err.toString() });
   }
 });
 
-// ✅ VERY IMPORTANT
+// IMPORTANT for Railway
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Server running on port", PORT);
