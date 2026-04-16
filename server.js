@@ -1,12 +1,14 @@
 import express from "express";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 
 const app = express();
 
+// ✅ Health check
 app.get("/", (req, res) => {
-  res.send("BEP Tracker Running (Live)");
+  res.send("BEP Tracker FINAL LIVE");
 });
 
+// ✅ Tracking route
 app.get("/track", async (req, res) => {
   const code = (req.query.code || "").trim();
 
@@ -18,23 +20,36 @@ app.get("/track", async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--ignore-certificate-errors"
+      ],
       headless: true
     });
 
     const page = await browser.newPage();
 
-    await page.goto("https://bepost.lk/p/Search/", {
-      waitUntil: "networkidle2"
+    // ✅ Ignore HTTPS errors
+    await page.setExtraHTTPHeaders({
+      "User-Agent": "Mozilla/5.0"
     });
 
+    await page.goto("https://bepost.lk/p/Search/", {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    });
+
+    // ✅ Input tracking number
     await page.type("input[name='trackingNumber']", code);
 
+    // ✅ Submit form
     await Promise.all([
       page.keyboard.press("Enter"),
       page.waitForNavigation({ waitUntil: "networkidle2" })
     ]);
 
+    // ✅ Extract table data
     const data = await page.evaluate(() => {
       const rows = document.querySelectorAll("table tr");
       const result = {};
@@ -53,11 +68,12 @@ app.get("/track", async (req, res) => {
 
     await browser.close();
 
+    // ✅ Clean output
     res.json({
-      status: data["Status"] || "",
+      status: data["Status"] || "Processing",
       date: data["Date"] || "",
       location: data["Location"] || "",
-      full: data
+      details: data
     });
 
   } catch (err) {
@@ -70,7 +86,8 @@ app.get("/track", async (req, res) => {
   }
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("Running on port " + PORT);
+  console.log("Server running on port " + PORT);
 });
