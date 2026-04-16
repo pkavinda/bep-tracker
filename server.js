@@ -20,22 +20,21 @@ app.get("/track", async (req, res) => {
         "Content-Type": "application/x-www-form-urlencoded",
         "User-Agent": "Mozilla/5.0"
       },
-      body: new URLSearchParams({
-        trackingNumber: code
-      })
+      body: `trackingNumber=${code}`
     });
 
     const html = await response.text();
 
+    // 👇 IMPORTANT: return HTML so we inspect it
     res.json({
       ok: true,
-      tracking: code,
-      html
+      html: html.slice(0, 2000) // limit size
     });
+
   } catch (err) {
-    res.status(500).json({
-      error: "Failed to fetch BEP",
-      details: String(err)
+    res.json({
+      error: "Fetch failed",
+      details: err.toString()
     });
   }
 });
