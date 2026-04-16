@@ -5,11 +5,17 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.post("/track", async (req, res) => {
-  const barcode = req.body.barcode;
+// ✅ Home route (so no "Cannot GET /")
+app.get("/", (req, res) => {
+  res.send("Sri Lanka Post Tracking API Running ✅");
+});
+
+// ✅ TRACK ROUTE (GET for testing + Shopify use)
+app.get("/track", async (req, res) => {
+  const barcode = req.query.barcode;
 
   if (!barcode) {
-    return res.json({ success: false, error: "No barcode" });
+    return res.json({ success: false, error: "No barcode provided" });
   }
 
   try {
@@ -24,20 +30,39 @@ app.post("/track", async (req, res) => {
       }
     );
 
-    const html = response.data.replace(/<[^>]*>?/gm, "");
+    const html = response.data;
+
+    // 🔍 Extract table rows (basic parsing)
+    const matches = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)];
+
+    const history = matches.map(row => {
+      const cols = [...row[1].matchAll(/<td.*?>(.*?)<\/td>/gs)]
+        .map(c => c[1].replace(/<.*?>/g, "").trim());
+
+      if (cols.length >= 3) {
+        return {
+          date: cols[0],
+          location: cols[1],
+          status: cols[2]
+        };
+      }
+    }).filter(Boolean);
 
     res.json({
       success: true,
-      status: "Fetched",
-      raw: html.substring(0, 1000)
+      barcode,
+      status: history[0]?.status || "No updates",
+      history
     });
 
   } catch (err) {
     res.json({
       success: false,
-      error: "Fetch failed"
+      error: "Failed to fetch tracking"
     });
   }
 });
 
-app.listen(10000, () => console.log("Server running"));
+// Render uses dynamic port
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log("Server running"));
