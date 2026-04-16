@@ -1,10 +1,10 @@
 import express from "express";
-import puppeteer from "puppeteer";
+import { chromium } from "playwright";
 
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("BEP TRACKER RENDER LIVE");
+  res.send("PLAYWRIGHT VERSION LIVE");
 });
 
 app.get("/track", async (req, res) => {
@@ -17,40 +17,23 @@ app.get("/track", async (req, res) => {
   let browser;
 
   try {
-    browser = await puppeteer.launch({
-  headless: true,
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--ignore-certificate-errors"
-  ],
-  executablePath: puppeteer.executablePath() // 🔥 important
-});
+    browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox"]
+    });
 
     const page = await browser.newPage();
 
-    // 🔥 Real browser behavior
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
-    );
+    await page.goto("https://bepost.lk/p/Search/");
 
-    await page.goto("https://bepost.lk/p/Search/", {
-      waitUntil: "domcontentloaded",
-      timeout: 60000
-    });
+    await page.fill("input[type='text']", code);
 
-    await page.waitForSelector("input[type='text']", { timeout: 15000 });
-
-    await page.type("input[type='text']", code);
-
-    // Submit form properly
     await page.evaluate(() => {
       const form = document.querySelector("form");
       if (form) form.submit();
     });
 
-    // wait for results
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    await page.waitForTimeout(8000);
 
     const content = await page.evaluate(() => document.body.innerText);
 
