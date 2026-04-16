@@ -33,7 +33,30 @@ app.get("/track", async (req, res) => {
       timeout: 60000
     });
 
-    await page.type("input[name='trackingNumber']", code);
+    // Wait for ANY input field (safe)
+await page.waitForSelector("input", { timeout: 15000 });
+
+// Try multiple selectors
+const inputSelectors = [
+  "input[name='trackingNumber']",
+  "#trackingNumber",
+  "input[type='text']"
+];
+
+let found = false;
+
+for (const selector of inputSelectors) {
+  const exists = await page.$(selector);
+  if (exists) {
+    await page.type(selector, code);
+    found = true;
+    break;
+  }
+}
+
+if (!found) {
+  throw new Error("Tracking input field not found");
+}
 
     await Promise.all([
       page.keyboard.press("Enter"),
