@@ -1,46 +1,24 @@
 import express from "express";
-import cheerio from "cheerio";
 
 const app = express();
 
-// Health check
+// ✅ Health route (Railway needs this)
 app.get("/", (req, res) => {
-  res.send("BEP Tracker Running");
+  res.send("Server is running");
 });
 
-app.get("/track", async (req, res) => {
-  const code = req.query.code;
+// ✅ Test route (no BEP yet — just to confirm server works)
+app.get("/track", (req, res) => {
+  const code = req.query.code || "NONE";
 
-  if (!code) {
-    return res.json({ error: "No tracking number" });
-  }
-
-  try {
-    const response = await fetch("https://bepost.lk/p/Search/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0"
-      },
-      body: `trackingNumber=${code}`
-    });
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const status = $("td:contains('Status')").next("td").text().trim();
-    const date = $("td:contains('Date')").next("td").text().trim();
-    const location = $("td:contains('Location')").next("td").text().trim();
-
-    res.json({ status, date, location });
-
-  } catch (err) {
-    res.json({ error: err.toString() });
-  }
+  res.json({
+    status: "OK",
+    tracking: code
+  });
 });
 
-// IMPORTANT for Railway
+// ✅ IMPORTANT: correct port binding
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("Server running on port", PORT);
+  console.log("Running on port " + PORT);
 });
