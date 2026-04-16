@@ -33,15 +33,13 @@ app.get("/track", async (req, res) => {
       timeout: 60000
     });
 
-    // 🔥 REPLACED CORE STARTS HERE
-
     // wait for input
     await page.waitForSelector("input", { timeout: 15000 });
 
     // type tracking
     await page.type("input", code);
 
-    // try clicking submit button
+    // click or press enter
     const btn = await page.$("button, input[type='submit']");
     if (btn) {
       await btn.click();
@@ -49,21 +47,17 @@ app.get("/track", async (req, res) => {
       await page.keyboard.press("Enter");
     }
 
-    // wait for ANY content change (not table)
-    await page.waitForTimeout(5000);
+    // ✅ FIXED DELAY
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // get full page text
     const content = await page.evaluate(() => document.body.innerText);
 
     await browser.close();
 
-    // return raw content for debug
     res.json({
       ok: true,
       preview: content.slice(0, 1000)
     });
-
-    // 🔥 REPLACED CORE ENDS HERE
 
   } catch (err) {
     if (browser) await browser.close();
