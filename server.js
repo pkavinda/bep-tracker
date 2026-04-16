@@ -18,13 +18,14 @@ app.get("/track", async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--ignore-certificate-errors"
-      ]
-    });
+  headless: true,
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--ignore-certificate-errors"
+  ],
+  executablePath: puppeteer.executablePath() // 🔥 important
+});
 
     const page = await browser.newPage();
 
