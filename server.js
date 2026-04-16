@@ -58,10 +58,10 @@ if (!found) {
   throw new Error("Tracking input field not found");
 }
 
-    await Promise.all([
-      page.keyboard.press("Enter"),
-      page.waitForNavigation({ waitUntil: "networkidle2" })
-    ]);
+    await page.keyboard.press("Enter");
+
+// wait for results table instead of navigation
+await page.waitForSelector("table", { timeout: 20000 });
 
     const data = await page.evaluate(() => {
       const rows = document.querySelectorAll("table tr");
