@@ -1,39 +1,70 @@
 import express from "express";
+import puppeteer from "puppeteer";
 
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("Server is running");
+  res.send("BEP Tracker Running (Live)");
 });
 
 app.get("/track", async (req, res) => {
   const code = (req.query.code || "").trim();
 
   if (!code) {
-    return res.status(400).json({ error: "No tracking number" });
+    return res.json({ error: "No tracking number" });
   }
 
+  let browser;
+
   try {
-    const response = await fetch("https://bepost.lk/p/Search/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0"
-      },
-      body: `trackingNumber=${code}`
+    browser = await puppeteer.launch({
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: true
     });
 
-    const html = await response.text();
+    const page = await browser.newPage();
 
-    // 👇 IMPORTANT: return HTML so we inspect it
+    await page.goto("https://bepost.lk/p/Search/", {
+      waitUntil: "networkidle2"
+    });
+
+    await page.type("input[name='trackingNumber']", code);
+
+    await Promise.all([
+      page.keyboard.press("Enter"),
+      page.waitForNavigation({ waitUntil: "networkidle2" })
+    ]);
+
+    const data = await page.evaluate(() => {
+      const rows = document.querySelectorAll("table tr");
+      const result = {};
+
+      rows.forEach(row => {
+        const cols = row.querySelectorAll("td");
+        if (cols.length === 2) {
+          const key = cols[0].innerText.trim();
+          const value = cols[1].innerText.trim();
+          result[key] = value;
+        }
+      });
+
+      return result;
+    });
+
+    await browser.close();
+
     res.json({
-      ok: true,
-      html: html.slice(0, 2000) // limit size
+      status: data["Status"] || "",
+      date: data["Date"] || "",
+      location: data["Location"] || "",
+      full: data
     });
 
   } catch (err) {
+    if (browser) await browser.close();
+
     res.json({
-      error: "Fetch failed",
+      error: "Tracking failed",
       details: err.toString()
     });
   }
