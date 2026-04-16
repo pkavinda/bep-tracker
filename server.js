@@ -7,29 +7,8 @@ app.get("/", (req, res) => {
   res.send("BEP TRACKER FINAL WORKING");
 });
 
-// wait for input
-await page.waitForSelector("input", { timeout: 15000 });
-
-// type tracking
-await page.type("input", code);
-
-// try clicking submit button
-const btn = await page.$("button, input[type='submit']");
-if (btn) {
-  await btn.click();
-}
-
-// wait for ANY content change (not table)
-await page.waitForTimeout(5000);
-
-// get full page text
-const content = await page.evaluate(() => document.body.innerText);
-
-// return raw content for debug
-res.json({
-  ok: true,
-  preview: content.slice(0, 1000)
-});
+app.get("/track", async (req, res) => {
+  const code = (req.query.code || "").trim();
 
   if (!code) {
     return res.json({ error: "No tracking number" });
@@ -39,13 +18,13 @@ res.json({
 
   try {
     browser = await puppeteer.launch({
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--ignore-certificate-errors"
-  ],
-  headless: true
-});
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--ignore-certificate-errors"
+      ],
+      headless: true
+    });
 
     const page = await browser.newPage();
 
@@ -54,58 +33,37 @@ res.json({
       timeout: 60000
     });
 
-    // Wait for ANY input field (safe)
-await page.waitForSelector("input", { timeout: 15000 });
+    // 🔥 REPLACED CORE STARTS HERE
 
-// Try multiple selectors
-const inputSelectors = [
-  "input[name='trackingNumber']",
-  "#trackingNumber",
-  "input[type='text']"
-];
+    // wait for input
+    await page.waitForSelector("input", { timeout: 15000 });
 
-let found = false;
+    // type tracking
+    await page.type("input", code);
 
-for (const selector of inputSelectors) {
-  const exists = await page.$(selector);
-  if (exists) {
-    await page.type(selector, code);
-    found = true;
-    break;
-  }
-}
+    // try clicking submit button
+    const btn = await page.$("button, input[type='submit']");
+    if (btn) {
+      await btn.click();
+    } else {
+      await page.keyboard.press("Enter");
+    }
 
-if (!found) {
-  throw new Error("Tracking input field not found");
-}
+    // wait for ANY content change (not table)
+    await page.waitForTimeout(5000);
 
-    await page.keyboard.press("Enter");
-
-// wait for results table instead of navigation
-await page.waitForSelector("table", { timeout: 20000 });
-
-    const data = await page.evaluate(() => {
-      const rows = document.querySelectorAll("table tr");
-      const result = {};
-
-      rows.forEach(row => {
-        const cols = row.querySelectorAll("td");
-        if (cols.length === 2) {
-          result[cols[0].innerText.trim()] = cols[1].innerText.trim();
-        }
-      });
-
-      return result;
-    });
+    // get full page text
+    const content = await page.evaluate(() => document.body.innerText);
 
     await browser.close();
 
+    // return raw content for debug
     res.json({
-      status: data["Status"] || "Processing",
-      date: data["Date"] || "",
-      location: data["Location"] || "",
-      details: data
+      ok: true,
+      preview: content.slice(0, 1000)
     });
+
+    // 🔥 REPLACED CORE ENDS HERE
 
   } catch (err) {
     if (browser) await browser.close();
