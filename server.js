@@ -1,14 +1,12 @@
 import express from "express";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 
 const app = express();
 
-// ✅ Health check
 app.get("/", (req, res) => {
-  res.send("BEP Tracker FINAL LIVE");
+  res.send("BEP TRACKER FINAL WORKING");
 });
 
-// ✅ Tracking route
 app.get("/track", async (req, res) => {
   const code = (req.query.code || "").trim();
 
@@ -30,26 +28,18 @@ app.get("/track", async (req, res) => {
 
     const page = await browser.newPage();
 
-    // ✅ Ignore HTTPS errors
-    await page.setExtraHTTPHeaders({
-      "User-Agent": "Mozilla/5.0"
-    });
-
     await page.goto("https://bepost.lk/p/Search/", {
       waitUntil: "networkidle2",
       timeout: 60000
     });
 
-    // ✅ Input tracking number
     await page.type("input[name='trackingNumber']", code);
 
-    // ✅ Submit form
     await Promise.all([
       page.keyboard.press("Enter"),
       page.waitForNavigation({ waitUntil: "networkidle2" })
     ]);
 
-    // ✅ Extract table data
     const data = await page.evaluate(() => {
       const rows = document.querySelectorAll("table tr");
       const result = {};
@@ -57,9 +47,7 @@ app.get("/track", async (req, res) => {
       rows.forEach(row => {
         const cols = row.querySelectorAll("td");
         if (cols.length === 2) {
-          const key = cols[0].innerText.trim();
-          const value = cols[1].innerText.trim();
-          result[key] = value;
+          result[cols[0].innerText.trim()] = cols[1].innerText.trim();
         }
       });
 
@@ -68,7 +56,6 @@ app.get("/track", async (req, res) => {
 
     await browser.close();
 
-    // ✅ Clean output
     res.json({
       status: data["Status"] || "Processing",
       date: data["Date"] || "",
@@ -86,7 +73,6 @@ app.get("/track", async (req, res) => {
   }
 });
 
-// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Server running on port " + PORT);
