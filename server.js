@@ -3,12 +3,10 @@ import puppeteer from "puppeteer";
 
 const app = express();
 
-// ✅ Home route
 app.get("/", (req, res) => {
   res.send("BEP TRACKER FINAL WORKING");
 });
 
-// ✅ Tracking route
 app.get("/track", async (req, res) => {
   const code = (req.query.code || "").trim();
 
@@ -35,27 +33,19 @@ app.get("/track", async (req, res) => {
       timeout: 60000
     });
 
-    // ✅ Wait for correct input
+    // ✅ Wait for input
     await page.waitForSelector("input[type='text']", { timeout: 15000 });
-
-    // ✅ Clear input safely
-    await page.evaluate(() => {
-      const input = document.querySelector("input[type='text']");
-      if (input) input.value = "";
-    });
 
     // ✅ Type tracking number
     await page.type("input[type='text']", code);
 
-    // ✅ Click search button
-    const searchBtn = await page.$("button, input[type='submit']");
-    if (!searchBtn) {
-      throw new Error("Search button not found");
-    }
+    // ✅ SUBMIT FORM DIRECTLY (KEY FIX)
+    await page.evaluate(() => {
+      const form = document.querySelector("form");
+      if (form) form.submit();
+    });
 
-    await searchBtn.click();
-
-    // ✅ Wait for results (AJAX load)
+    // ✅ Wait for results to load
     await new Promise(resolve => setTimeout(resolve, 7000));
 
     // ✅ Get full page text
@@ -63,10 +53,9 @@ app.get("/track", async (req, res) => {
 
     await browser.close();
 
-    // ✅ Debug output (we will refine next)
     res.json({
       ok: true,
-      preview: content.slice(0, 1200)
+      preview: content.slice(0, 1500)
     });
 
   } catch (err) {
@@ -79,7 +68,6 @@ app.get("/track", async (req, res) => {
   }
 });
 
-// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Server running on port " + PORT);
