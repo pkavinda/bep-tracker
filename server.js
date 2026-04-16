@@ -1,10 +1,9 @@
 import express from "express";
-import { chromium } from "playwright";
 
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("PLAYWRIGHT VERSION LIVE");
+  res.send("BEP SIMPLE TRACKER LIVE");
 });
 
 app.get("/track", async (req, res) => {
@@ -14,41 +13,30 @@ app.get("/track", async (req, res) => {
     return res.json({ error: "No tracking number" });
   }
 
-  let browser;
-
   try {
-    browser = await chromium.launch({
-      headless: true,
-      args: ["--no-sandbox"]
+    const response = await fetch("https://bepost.lk/p/Search/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://bepost.lk/p/Search/"
+      },
+      body: `trackingNumber=${code}`
     });
 
-    const page = await browser.newPage();
+    const html = await response.text();
 
-    await page.goto("https://bepost.lk/p/Search/");
-
-    await page.fill("input[type='text']", code);
-
-    await page.evaluate(() => {
-      const form = document.querySelector("form");
-      if (form) form.submit();
-    });
-
-    await page.waitForTimeout(8000);
-
-    const content = await page.evaluate(() => document.body.innerText);
-
-    await browser.close();
+    // simple extraction (text-based)
+    const text = html.replace(/<[^>]*>/g, " ");
 
     res.json({
       ok: true,
-      preview: content.slice(0, 1500)
+      preview: text.slice(0, 1200)
     });
 
   } catch (err) {
-    if (browser) await browser.close();
-
     res.json({
-      error: "Tracking failed",
+      error: "Request failed",
       details: err.toString()
     });
   }
