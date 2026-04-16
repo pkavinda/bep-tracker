@@ -4,6 +4,11 @@ import cheerio from "cheerio";
 
 const app = express();
 
+// ✅ Health check (IMPORTANT for Railway)
+app.get("/", (req, res) => {
+  res.send("BEP Tracker Running");
+});
+
 app.get("/track", async (req, res) => {
   const code = req.query.code;
 
@@ -24,20 +29,19 @@ app.get("/track", async (req, res) => {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const status = $("td:contains('Status')").next().text().trim();
-    const date = $("td:contains('Date')").next().text().trim();
-    const location = $("td:contains('Location')").next().text().trim();
+    const status = $("td:contains('Status')").next("td").text().trim();
+    const date = $("td:contains('Date')").next("td").text().trim();
+    const location = $("td:contains('Location')").next("td").text().trim();
 
-    res.json({
-      status,
-      date,
-      location
-    });
+    res.json({ status, date, location });
 
   } catch (err) {
     res.json({ error: "Failed to fetch BEP" });
   }
 });
 
+// ✅ VERY IMPORTANT
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running"));
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server running on port", PORT);
+});
