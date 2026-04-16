@@ -4,7 +4,7 @@ import puppeteer from "puppeteer";
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("BEP TRACKER FINAL WORKING");
+  res.send("BEP TRACKER RENDER LIVE");
 });
 
 app.get("/track", async (req, res) => {
@@ -18,37 +18,39 @@ app.get("/track", async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
+      headless: true,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--ignore-certificate-errors"
-      ],
-      headless: true
+      ]
     });
 
     const page = await browser.newPage();
 
+    // 🔥 Real browser behavior
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+    );
+
     await page.goto("https://bepost.lk/p/Search/", {
-      waitUntil: "networkidle2",
+      waitUntil: "domcontentloaded",
       timeout: 60000
     });
 
-    // ✅ Wait for input
     await page.waitForSelector("input[type='text']", { timeout: 15000 });
 
-    // ✅ Type tracking number
     await page.type("input[type='text']", code);
 
-    // ✅ SUBMIT FORM DIRECTLY (KEY FIX)
+    // Submit form properly
     await page.evaluate(() => {
       const form = document.querySelector("form");
       if (form) form.submit();
     });
 
-    // ✅ Wait for results to load
-    await new Promise(resolve => setTimeout(resolve, 7000));
+    // wait for results
+    await new Promise(resolve => setTimeout(resolve, 8000));
 
-    // ✅ Get full page text
     const content = await page.evaluate(() => document.body.innerText);
 
     await browser.close();
@@ -68,7 +70,7 @@ app.get("/track", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("Server running on port " + PORT);
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log("Running on port " + PORT);
 });
