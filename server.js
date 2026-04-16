@@ -7,8 +7,29 @@ app.get("/", (req, res) => {
   res.send("BEP TRACKER FINAL WORKING");
 });
 
-app.get("/track", async (req, res) => {
-  const code = (req.query.code || "").trim();
+// wait for input
+await page.waitForSelector("input", { timeout: 15000 });
+
+// type tracking
+await page.type("input", code);
+
+// try clicking submit button
+const btn = await page.$("button, input[type='submit']");
+if (btn) {
+  await btn.click();
+}
+
+// wait for ANY content change (not table)
+await page.waitForTimeout(5000);
+
+// get full page text
+const content = await page.evaluate(() => document.body.innerText);
+
+// return raw content for debug
+res.json({
+  ok: true,
+  preview: content.slice(0, 1000)
+});
 
   if (!code) {
     return res.json({ error: "No tracking number" });
