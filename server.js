@@ -2,40 +2,59 @@ const express = require("express");
 const axios = require("axios");
 const app = express();
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// ✅ Home route (so no "Cannot GET /")
 app.get("/", (req, res) => {
-  res.send("Sri Lanka Post Tracking API Running ✅");
+  res.send("Tracker running ✅");
 });
 
-// ✅ TRACK ROUTE (GET for testing + Shopify use)
+// 🔥 Level 2 tracker
 app.get("/track", async (req, res) => {
   const barcode = req.query.barcode;
 
   if (!barcode) {
-    return res.json({ success: false, error: "No barcode provided" });
+    return res.json({ success: false, error: "No barcode" });
+  }
+
+  // function to request with headers
+  async function fetchTracking() {
+    return axios({
+      method: "post",
+      url: "https://bepost.lk/p/Search/",
+      data: new URLSearchParams({ barcode }).toString(),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Origin": "https://bepost.lk",
+        "Referer": "https://bepost.lk/",
+        "Accept": "text/html,application/xhtml+xml"
+      },
+      timeout: 15000
+    });
   }
 
   try {
-    const response = await axios.post(
-      "https://bepost.lk/p/Search/",
-      new URLSearchParams({ barcode }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "Mozilla/5.0"
-        }
-      }
-    );
+    let response;
+
+    // 🔁 retry system (important)
+    try {
+      response = await fetchTracking();
+    } catch (err) {
+      // retry once
+      response = await fetchTracking();
+    }
 
     const html = response.data;
 
-    // 🔍 Extract table rows (basic parsing)
-    const matches = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)];
+    if (!html || html.length < 200) {
+      return res.json({
+        success: false,
+        error: "No tracking data yet"
+      });
+    }
 
-    const history = matches.map(row => {
+    // 🔍 extract rows
+    const rows = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)];
+
+    const history = rows.map(row => {
       const cols = [...row[1].matchAll(/<td.*?>(.*?)<\/td>/gs)]
         .map(c => c[1].replace(/<.*?>/g, "").trim());
 
@@ -51,18 +70,17 @@ app.get("/track", async (req, res) => {
     res.json({
       success: true,
       barcode,
-      status: history[0]?.status || "No updates",
+      status: history[0]?.status || "Processing",
       history
     });
 
   } catch (err) {
     res.json({
       success: false,
-      error: "Failed to fetch tracking"
+      error: "Tracking temporarily unavailable"
     });
   }
 });
 
-// Render uses dynamic port
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log("Server running"));
